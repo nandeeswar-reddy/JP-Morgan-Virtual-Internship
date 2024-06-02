@@ -1,0 +1,284 @@
+#Step 1: Enhanced Data Retrieval:-
+import pandas as pd
+import yfinance as yf
+import time
+import logging
+
+# Setup logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+# Define the stock symbols
+stock_1 = 'AAPL'
+stock_2 = 'MSFT'
+
+# Fetch historical data
+def fetch_historical_data(stock, start_date, end_date):
+    logging.info(f"Fetching historical data for {stock} from {start_date} to {end_date}")
+    data = yf.download(stock, start=start_date, end=end_date)
+    return data['Close']
+
+try:
+    data_1 = fetch_historical_data(stock_1, '2020-01-01', '2023-01-01')
+    data_2 = fetch_historical_data(stock_2, '2020-01-01', '2023-01-01')
+except Exception as e:
+    logging.error(f"Error fetching historical data: {e}")
+    raise
+
+# Combine the data into a single DataFrame
+data = pd.DataFrame({stock_1: data_1, stock_2: data_2})
+
+#output of step 1:-
+[*********************100%%**********************]  1 of 1 completed
+[*********************100%%**********************]  1 of 1 completed
+
+
+#Step 2: Advanced Correlation Analysis:-
+# Calculate the rolling correlation
+rolling_window = 30  # 30-day rolling window
+data['Correlation'] = data[stock_1].rolling(window=rolling_window).corr(data[stock_2])
+
+# Calculate z-scores for correlation
+def calculate_z_score(series):
+    mean = series.mean()
+    std = series.std()
+    return (series - mean) / std
+
+data['Correlation_zscore'] = calculate_z_score(data['Correlation'])
+
+
+#Step 3: Real-Time Monitoring:-
+def fetch_real_time_data(stock):
+    data = yf.download(stock, period='1d', interval='1m')
+    return data['Close'].iloc[-1]
+
+def monitor_stocks(stock_1, stock_2, threshold=2):
+    while True:
+        try:
+            latest_price_1 = fetch_real_time_data(stock_1)
+            latest_price_2 = fetch_real_time_data(stock_2)
+            logging.info(f"Latest prices - {stock_1}: {latest_price_1}, {stock_2}: {latest_price_2}")
+            
+            # Add new prices to historical data
+            new_data = pd.DataFrame({stock_1: [latest_price_1], stock_2: [latest_price_2]}, index=[pd.Timestamp.now()])
+            global data
+            data = pd.concat([data, new_data])
+
+            # Recalculate rolling correlation and z-score
+            data['Correlation'] = data[stock_1].rolling(window=rolling_window).corr(data[stock_2])
+            data['Correlation_zscore'] = calculate_z_score(data['Correlation'])
+
+            # Check for significant deviation
+            latest_zscore = data['Correlation_zscore'].iloc[-1]
+            if abs(latest_zscore) > threshold:
+                logging.info(f"Significant deviation detected! Z-score: {latest_zscore}")
+                # Implement alert mechanism (e.g., email, SMS, etc.)
+
+            time.sleep(60)  # Wait for 1 minute before fetching new data
+        except Exception as e:
+            logging.error(f"Error in real-time monitoring: {e}")
+
+# Start monitoring in a separate thread or process
+import threading
+monitor_thread = threading.Thread(target=monitor_stocks, args=(stock_1, stock_2))
+monitor_thread.start()
+
+#output of step 3:-
+[*********************100%%**********************]  1 of 1 completed
+[*********************100%%**********************]  1 of 1 completed
+
+
+#Step 4: Comprehensive Visualization with Perspective:-
+!pip install perspective-python
+from perspective import Table, PerspectiveWidget
+import pandas as pd
+
+# Prepare the data
+data_reset = data.reset_index()
+data_reset.columns = ['date', stock_1, stock_2, 'Correlation', 'Correlation_zscore']
+
+# Create a Perspective Table with historical data
+table = Table(data_reset)
+
+# Set up the Perspective Widget for visualization
+widget = PerspectiveWidget(table)
+
+# Configure the chart
+widget.view = 'y_line'
+widget.columns = [stock_1, stock_2, 'Correlation_zscore']
+widget.aggregates = {
+    stock_1: "avg",
+    stock_2: "avg",
+    "Correlation_zscore": "avg"
+}
+widget.sort = [["date", "asc"]]
+widget.row_pivots = ['date']
+
+# Display the widget (assuming a Jupyter notebook or web environment)
+widget
+
+#output of step 4:-
+Requirement already satisfied: perspective-python in /usr/local/lib/python3.10/dist-packages (2.10.1)
+Requirement already satisfied: Jinja2<4,>=2.0 in /usr/local/lib/python3.10/dist-packages (from perspective-python) (3.1.4)
+Requirement already satisfied: ipywidgets<9,>=7.5.1 in /usr/local/lib/python3.10/dist-packages (from perspective-python) (7.7.1)
+Requirement already satisfied: numpy<2,>=1.21.6 in /usr/local/lib/python3.10/dist-packages (from perspective-python) (1.25.2)
+Requirement already satisfied: pandas<3,>=0.22.0 in /usr/local/lib/python3.10/dist-packages (from perspective-python) (2.0.3)
+Requirement already satisfied: python-dateutil<3,>=2.8.0 in /usr/local/lib/python3.10/dist-packages (from perspective-python) (2.8.2)
+Requirement already satisfied: traitlets<6,>=4.3.2 in /usr/local/lib/python3.10/dist-packages (from perspective-python) (5.7.1)
+Requirement already satisfied: ipykernel>=4.5.1 in /usr/local/lib/python3.10/dist-packages (from ipywidgets<9,>=7.5.1->perspective-python) (5.5.6)
+Requirement already satisfied: ipython-genutils~=0.2.0 in /usr/local/lib/python3.10/dist-packages (from ipywidgets<9,>=7.5.1->perspective-python) (0.2.0)
+Requirement already satisfied: widgetsnbextension~=3.6.0 in /usr/local/lib/python3.10/dist-packages (from ipywidgets<9,>=7.5.1->perspective-python) (3.6.6)
+Requirement already satisfied: ipython>=4.0.0 in /usr/local/lib/python3.10/dist-packages (from ipywidgets<9,>=7.5.1->perspective-python) (7.34.0)
+Requirement already satisfied: jupyterlab-widgets>=1.0.0 in /usr/local/lib/python3.10/dist-packages (from ipywidgets<9,>=7.5.1->perspective-python) (3.0.10)
+Requirement already satisfied: MarkupSafe>=2.0 in /usr/local/lib/python3.10/dist-packages (from Jinja2<4,>=2.0->perspective-python) (2.1.5)
+Requirement already satisfied: pytz>=2020.1 in /usr/local/lib/python3.10/dist-packages (from pandas<3,>=0.22.0->perspective-python) (2023.4)
+Requirement already satisfied: tzdata>=2022.1 in /usr/local/lib/python3.10/dist-packages (from pandas<3,>=0.22.0->perspective-python) (2024.1)
+Requirement already satisfied: six>=1.5 in /usr/local/lib/python3.10/dist-packages (from python-dateutil<3,>=2.8.0->perspective-python) (1.16.0)
+Requirement already satisfied: jupyter-client in /usr/local/lib/python3.10/dist-packages (from ipykernel>=4.5.1->ipywidgets<9,>=7.5.1->perspective-python) (6.1.12)
+Requirement already satisfied: tornado>=4.2 in /usr/local/lib/python3.10/dist-packages (from ipykernel>=4.5.1->ipywidgets<9,>=7.5.1->perspective-python) (6.3.3)
+Requirement already satisfied: setuptools>=18.5 in /usr/local/lib/python3.10/dist-packages (from ipython>=4.0.0->ipywidgets<9,>=7.5.1->perspective-python) (67.7.2)
+Requirement already satisfied: jedi>=0.16 in /usr/local/lib/python3.10/dist-packages (from ipython>=4.0.0->ipywidgets<9,>=7.5.1->perspective-python) (0.19.1)
+Requirement already satisfied: decorator in /usr/local/lib/python3.10/dist-packages (from ipython>=4.0.0->ipywidgets<9,>=7.5.1->perspective-python) (4.4.2)
+Requirement already satisfied: pickleshare in /usr/local/lib/python3.10/dist-packages (from ipython>=4.0.0->ipywidgets<9,>=7.5.1->perspective-python) (0.7.5)
+Requirement already satisfied: prompt-toolkit!=3.0.0,!=3.0.1,<3.1.0,>=2.0.0 in /usr/local/lib/python3.10/dist-packages (from ipython>=4.0.0->ipywidgets<9,>=7.5.1->perspective-python) (3.0.43)
+Requirement already satisfied: pygments in /usr/local/lib/python3.10/dist-packages (from ipython>=4.0.0->ipywidgets<9,>=7.5.1->perspective-python) (2.16.1)
+Requirement already satisfied: backcall in /usr/local/lib/python3.10/dist-packages (from ipython>=4.0.0->ipywidgets<9,>=7.5.1->perspective-python) (0.2.0)
+Requirement already satisfied: matplotlib-inline in /usr/local/lib/python3.10/dist-packages (from ipython>=4.0.0->ipywidgets<9,>=7.5.1->perspective-python) (0.1.7)
+Requirement already satisfied: pexpect>4.3 in /usr/local/lib/python3.10/dist-packages (from ipython>=4.0.0->ipywidgets<9,>=7.5.1->perspective-python) (4.9.0)
+Requirement already satisfied: notebook>=4.4.1 in /usr/local/lib/python3.10/dist-packages (from widgetsnbextension~=3.6.0->ipywidgets<9,>=7.5.1->perspective-python) (6.5.5)
+Requirement already satisfied: parso<0.9.0,>=0.8.3 in /usr/local/lib/python3.10/dist-packages (from jedi>=0.16->ipython>=4.0.0->ipywidgets<9,>=7.5.1->perspective-python) (0.8.4)
+Requirement already satisfied: pyzmq<25,>=17 in /usr/local/lib/python3.10/dist-packages (from notebook>=4.4.1->widgetsnbextension~=3.6.0->ipywidgets<9,>=7.5.1->perspective-python) (24.0.1)
+Requirement already satisfied: argon2-cffi in /usr/local/lib/python3.10/dist-packages (from notebook>=4.4.1->widgetsnbextension~=3.6.0->ipywidgets<9,>=7.5.1->perspective-python) (23.1.0)
+Requirement already satisfied: jupyter-core>=4.6.1 in /usr/local/lib/python3.10/dist-packages (from notebook>=4.4.1->widgetsnbextension~=3.6.0->ipywidgets<9,>=7.5.1->perspective-python) (5.7.2)
+Requirement already satisfied: nbformat in /usr/local/lib/python3.10/dist-packages (from notebook>=4.4.1->widgetsnbextension~=3.6.0->ipywidgets<9,>=7.5.1->perspective-python) (5.10.4)
+Requirement already satisfied: nbconvert>=5 in /usr/local/lib/python3.10/dist-packages (from notebook>=4.4.1->widgetsnbextension~=3.6.0->ipywidgets<9,>=7.5.1->perspective-python) (6.5.4)
+Requirement already satisfied: nest-asyncio>=1.5 in /usr/local/lib/python3.10/dist-packages (from notebook>=4.4.1->widgetsnbextension~=3.6.0->ipywidgets<9,>=7.5.1->perspective-python) (1.6.0)
+Requirement already satisfied: Send2Trash>=1.8.0 in /usr/local/lib/python3.10/dist-packages (from notebook>=4.4.1->widgetsnbextension~=3.6.0->ipywidgets<9,>=7.5.1->perspective-python) (1.8.3)
+Requirement already satisfied: terminado>=0.8.3 in /usr/local/lib/python3.10/dist-packages (from notebook>=4.4.1->widgetsnbextension~=3.6.0->ipywidgets<9,>=7.5.1->perspective-python) (0.18.1)
+Requirement already satisfied: prometheus-client in /usr/local/lib/python3.10/dist-packages (from notebook>=4.4.1->widgetsnbextension~=3.6.0->ipywidgets<9,>=7.5.1->perspective-python) (0.20.0)
+Requirement already satisfied: nbclassic>=0.4.7 in /usr/local/lib/python3.10/dist-packages (from notebook>=4.4.1->widgetsnbextension~=3.6.0->ipywidgets<9,>=7.5.1->perspective-python) (1.0.0)
+Requirement already satisfied: ptyprocess>=0.5 in /usr/local/lib/python3.10/dist-packages (from pexpect>4.3->ipython>=4.0.0->ipywidgets<9,>=7.5.1->perspective-python) (0.7.0)
+Requirement already satisfied: wcwidth in /usr/local/lib/python3.10/dist-packages (from prompt-toolkit!=3.0.0,!=3.0.1,<3.1.0,>=2.0.0->ipython>=4.0.0->ipywidgets<9,>=7.5.1->perspective-python) (0.2.13)
+Requirement already satisfied: platformdirs>=2.5 in /usr/local/lib/python3.10/dist-packages (from jupyter-core>=4.6.1->notebook>=4.4.1->widgetsnbextension~=3.6.0->ipywidgets<9,>=7.5.1->perspective-python) (4.2.2)
+Requirement already satisfied: jupyter-server>=1.8 in /usr/local/lib/python3.10/dist-packages (from nbclassic>=0.4.7->notebook>=4.4.1->widgetsnbextension~=3.6.0->ipywidgets<9,>=7.5.1->perspective-python) (1.24.0)
+Requirement already satisfied: notebook-shim>=0.2.3 in /usr/local/lib/python3.10/dist-packages (from nbclassic>=0.4.7->notebook>=4.4.1->widgetsnbextension~=3.6.0->ipywidgets<9,>=7.5.1->perspective-python) (0.2.4)
+Requirement already satisfied: lxml in /usr/local/lib/python3.10/dist-packages (from nbconvert>=5->notebook>=4.4.1->widgetsnbextension~=3.6.0->ipywidgets<9,>=7.5.1->perspective-python) (4.9.4)
+Requirement already satisfied: beautifulsoup4 in /usr/local/lib/python3.10/dist-packages (from nbconvert>=5->notebook>=4.4.1->widgetsnbextension~=3.6.0->ipywidgets<9,>=7.5.1->perspective-python) (4.12.3)
+Requirement already satisfied: bleach in /usr/local/lib/python3.10/dist-packages (from nbconvert>=5->notebook>=4.4.1->widgetsnbextension~=3.6.0->ipywidgets<9,>=7.5.1->perspective-python) (6.1.0)
+Requirement already satisfied: defusedxml in /usr/local/lib/python3.10/dist-packages (from nbconvert>=5->notebook>=4.4.1->widgetsnbextension~=3.6.0->ipywidgets<9,>=7.5.1->perspective-python) (0.7.1)
+Requirement already satisfied: entrypoints>=0.2.2 in /usr/local/lib/python3.10/dist-packages (from nbconvert>=5->notebook>=4.4.1->widgetsnbextension~=3.6.0->ipywidgets<9,>=7.5.1->perspective-python) (0.4)
+Requirement already satisfied: jupyterlab-pygments in /usr/local/lib/python3.10/dist-packages (from nbconvert>=5->notebook>=4.4.1->widgetsnbextension~=3.6.0->ipywidgets<9,>=7.5.1->perspective-python) (0.3.0)
+Requirement already satisfied: mistune<2,>=0.8.1 in /usr/local/lib/python3.10/dist-packages (from nbconvert>=5->notebook>=4.4.1->widgetsnbextension~=3.6.0->ipywidgets<9,>=7.5.1->perspective-python) (0.8.4)
+Requirement already satisfied: nbclient>=0.5.0 in /usr/local/lib/python3.10/dist-packages (from nbconvert>=5->notebook>=4.4.1->widgetsnbextension~=3.6.0->ipywidgets<9,>=7.5.1->perspective-python) (0.10.0)
+Requirement already satisfied: packaging in /usr/local/lib/python3.10/dist-packages (from nbconvert>=5->notebook>=4.4.1->widgetsnbextension~=3.6.0->ipywidgets<9,>=7.5.1->perspective-python) (24.0)
+Requirement already satisfied: pandocfilters>=1.4.1 in /usr/local/lib/python3.10/dist-packages (from nbconvert>=5->notebook>=4.4.1->widgetsnbextension~=3.6.0->ipywidgets<9,>=7.5.1->perspective-python) (1.5.1)
+Requirement already satisfied: tinycss2 in /usr/local/lib/python3.10/dist-packages (from nbconvert>=5->notebook>=4.4.1->widgetsnbextension~=3.6.0->ipywidgets<9,>=7.5.1->perspective-python) (1.3.0)
+Requirement already satisfied: fastjsonschema>=2.15 in /usr/local/lib/python3.10/dist-packages (from nbformat->notebook>=4.4.1->widgetsnbextension~=3.6.0->ipywidgets<9,>=7.5.1->perspective-python) (2.19.1)
+Requirement already satisfied: jsonschema>=2.6 in /usr/local/lib/python3.10/dist-packages (from nbformat->notebook>=4.4.1->widgetsnbextension~=3.6.0->ipywidgets<9,>=7.5.1->perspective-python) (4.19.2)
+Requirement already satisfied: argon2-cffi-bindings in /usr/local/lib/python3.10/dist-packages (from argon2-cffi->notebook>=4.4.1->widgetsnbextension~=3.6.0->ipywidgets<9,>=7.5.1->perspective-python) (21.2.0)
+Requirement already satisfied: attrs>=22.2.0 in /usr/local/lib/python3.10/dist-packages (from jsonschema>=2.6->nbformat->notebook>=4.4.1->widgetsnbextension~=3.6.0->ipywidgets<9,>=7.5.1->perspective-python) (23.2.0)
+Requirement already satisfied: jsonschema-specifications>=2023.03.6 in /usr/local/lib/python3.10/dist-packages (from jsonschema>=2.6->nbformat->notebook>=4.4.1->widgetsnbextension~=3.6.0->ipywidgets<9,>=7.5.1->perspective-python) (2023.12.1)
+Requirement already satisfied: referencing>=0.28.4 in /usr/local/lib/python3.10/dist-packages (from jsonschema>=2.6->nbformat->notebook>=4.4.1->widgetsnbextension~=3.6.0->ipywidgets<9,>=7.5.1->perspective-python) (0.35.1)
+Requirement already satisfied: rpds-py>=0.7.1 in /usr/local/lib/python3.10/dist-packages (from jsonschema>=2.6->nbformat->notebook>=4.4.1->widgetsnbextension~=3.6.0->ipywidgets<9,>=7.5.1->perspective-python) (0.18.1)
+Requirement already satisfied: anyio<4,>=3.1.0 in /usr/local/lib/python3.10/dist-packages (from jupyter-server>=1.8->nbclassic>=0.4.7->notebook>=4.4.1->widgetsnbextension~=3.6.0->ipywidgets<9,>=7.5.1->perspective-python) (3.7.1)
+Requirement already satisfied: websocket-client in /usr/local/lib/python3.10/dist-packages (from jupyter-server>=1.8->nbclassic>=0.4.7->notebook>=4.4.1->widgetsnbextension~=3.6.0->ipywidgets<9,>=7.5.1->perspective-python) (1.8.0)
+Requirement already satisfied: cffi>=1.0.1 in /usr/local/lib/python3.10/dist-packages (from argon2-cffi-bindings->argon2-cffi->notebook>=4.4.1->widgetsnbextension~=3.6.0->ipywidgets<9,>=7.5.1->perspective-python) (1.16.0)
+Requirement already satisfied: soupsieve>1.2 in /usr/local/lib/python3.10/dist-packages (from beautifulsoup4->nbconvert>=5->notebook>=4.4.1->widgetsnbextension~=3.6.0->ipywidgets<9,>=7.5.1->perspective-python) (2.5)
+Requirement already satisfied: webencodings in /usr/local/lib/python3.10/dist-packages (from bleach->nbconvert>=5->notebook>=4.4.1->widgetsnbextension~=3.6.0->ipywidgets<9,>=7.5.1->perspective-python) (0.5.1)
+Requirement already satisfied: idna>=2.8 in /usr/local/lib/python3.10/dist-packages (from anyio<4,>=3.1.0->jupyter-server>=1.8->nbclassic>=0.4.7->notebook>=4.4.1->widgetsnbextension~=3.6.0->ipywidgets<9,>=7.5.1->perspective-python) (3.7)
+Requirement already satisfied: sniffio>=1.1 in /usr/local/lib/python3.10/dist-packages (from anyio<4,>=3.1.0->jupyter-server>=1.8->nbclassic>=0.4.7->notebook>=4.4.1->widgetsnbextension~=3.6.0->ipywidgets<9,>=7.5.1->perspective-python) (1.3.1)
+Requirement already satisfied: exceptiongroup in /usr/local/lib/python3.10/dist-packages (from anyio<4,>=3.1.0->jupyter-server>=1.8->nbclassic>=0.4.7->notebook>=4.4.1->widgetsnbextension~=3.6.0->ipywidgets<9,>=7.5.1->perspective-python) (1.2.1)
+Requirement already satisfied: pycparser in /usr/local/lib/python3.10/dist-packages (from cffi>=1.0.1->argon2-cffi-bindings->argon2-cffi->notebook>=4.4.1->widgetsnbextension~=3.6.0->ipywidgets<9,>=7.5.1->perspective-python) (2.22)
+
+#Step 5: Error Handling and Logging:-
+import pandas as pd
+import yfinance as yf
+import time
+import logging
+import threading
+
+# Setup logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+# Define the stock symbols
+stock_1 = 'AAPL'
+stock_2 = 'MSFT'
+
+# Function to fetch historical data
+def fetch_historical_data(stock, start_date, end_date):
+    logging.info(f"Fetching historical data for {stock} from {start_date} to {end_date}")
+    try:
+        data = yf.download(stock, start=start_date, end=end_date)
+        return data['Close']
+    except Exception as e:
+        logging.error(f"Error fetching historical data for {stock}: {e}")
+        raise
+
+# Function to retry fetching data
+def fetch_data_with_retry(stock, start_date, end_date, retries=3):
+    for attempt in range(retries):
+        try:
+            return fetch_historical_data(stock, start_date, end_date)
+        except Exception as e:
+            logging.error(f"Attempt {attempt + 1} failed: {e}")
+            if attempt == retries - 1:
+                raise
+            time.sleep(2 ** attempt)  # Exponential backoff
+
+# Fetch historical data with retry logic
+try:
+    data_1 = fetch_data_with_retry(stock_1, '2020-01-01', '2023-01-01')
+    data_2 = fetch_data_with_retry(stock_2, '2020-01-01', '2023-01-01')
+except Exception as e:
+    logging.critical(f"Failed to fetch historical data after retries: {e}")
+    raise
+
+# Combine the data into a single DataFrame
+data = pd.DataFrame({stock_1: data_1, stock_2: data_2})
+
+# Calculate rolling correlation and z-score
+rolling_window = 30
+data['Correlation'] = data[stock_1].rolling(window=rolling_window).corr(data[stock_2])
+data['Correlation_zscore'] = (data['Correlation'] - data['Correlation'].mean()) / data['Correlation'].std()
+
+# Function to fetch real-time data
+def fetch_real_time_data(stock):
+    try:
+        data = yf.download(stock, period='1d', interval='1m')
+        return data['Close'].iloc[-1]
+    except Exception as e:
+        logging.error(f"Error fetching real-time data for {stock}: {e}")
+        raise
+
+# Monitor stocks and detect significant deviations
+def monitor_stocks(stock_1, stock_2, threshold=2):
+    while True:
+        try:
+            latest_price_1 = fetch_real_time_data(stock_1)
+            latest_price_2 = fetch_real_time_data(stock_2)
+            logging.info(f"Latest prices - {stock_1}: {latest_price_1}, {stock_2}: {latest_price_2}")
+            
+            new_data = pd.DataFrame({stock_1: [latest_price_1], stock_2: [latest_price_2]}, index=[pd.Timestamp.now()])
+            global data
+            data = pd.concat([data, new_data])
+            
+            data['Correlation'] = data[stock_1].rolling(window=rolling_window).corr(data[stock_2])
+            data['Correlation_zscore'] = (data['Correlation'] - data['Correlation'].mean()) / data['Correlation'].std()
+
+            latest_zscore = data['Correlation_zscore'].iloc[-1]
+            if abs(latest_zscore) > threshold:
+                logging.info(f"Significant deviation detected! Z-score: {latest_zscore}")
+                # Implement alert mechanism (e.g., email, SMS, etc.)
+
+            time.sleep(60)
+        except Exception as e:
+            logging.error(f"Error in real-time monitoring: {e}")
+
+# Start monitoring in a separate thread
+monitor_thread = threading.Thread(target=monitor_stocks, args=(stock_1, stock_2))
+monitor_thread.start()
+
+#output of step 5:-
+[*********************100%%**********************]  1 of 1 completed
+[*********************100%%**********************]  1 of 1 completed
+[*********************100%%**********************]  1 of 1 completed
+[*********************100%%**********************]  1 of 1 completed
